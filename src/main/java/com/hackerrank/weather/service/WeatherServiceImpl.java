@@ -219,15 +219,17 @@ List<Weather> weatherlist = this.weatherRepository.selectByDateAndLatitudeLongit
 			}
 		}else if(!StringUtils.isEmpty(latitude) && !StringUtils.isEmpty(longitude)) {
 			weatherData = this.weatherRepository.selectByLatitudeLongitude(latitude, longitude);
-			
 		}else {
 			weatherData = (List<Weather>) this.weatherRepository.findAll();
 		}
-			
-		if(CollectionUtils.isEmpty(weatherData)) {
-			 throw new CustomException("Record Does not exist","404");
-		}
-			  
+		if(!CollectionUtils.isEmpty(weatherData)) {
+			 List<Weather> sortedList = weatherData.stream()
+						.sorted(Comparator.comparingLong(Weather::getId))
+						.collect(Collectors.toList());
+			 weatherData = sortedList;
+			 }else {
+				 throw new CustomException("Record Does not exist","404");
+			 }
 		return weatherData;
 	}
 
