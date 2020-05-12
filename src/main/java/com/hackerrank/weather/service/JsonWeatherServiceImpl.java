@@ -16,34 +16,20 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hackerrank.weather.model.Location;
 import com.hackerrank.weather.model.Weather;
-import com.hackerrank.weather.repository.TemperatureDetailsRepository;
-import com.hackerrank.weather.repository.WeatherRepository;
 @Service
-public class WeatherServiceImpl implements WeatherService{
-	  @Autowired
-	  private WeatherRepository weatherRepository;
-	  
-	  @Autowired
-	  private TemperatureDetailsRepository temperatureDetailsRepository;
-	  Function<Weather, Long> weatherToWeatherId = 
-			    new Function<Weather, Long>() { 
-			        public Long apply(Weather i) { return i.getId(); }
-			    };
+public class JsonWeatherServiceImpl implements WeatherService{
 private static final String filename = "http00.json";
 private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 List<Weather> weatherList = new LinkedList<Weather>();
@@ -148,116 +134,77 @@ private Map<String,List<Weather>> getWeatherMapBasedOnLatitudelongitude(List<Wea
 }
 	@Override
 	public void erase(String startDate, String endDate,Long latitude,Long longitude) {
+		// TODO Auto-generated method stub
 		Map<Date,List<Weather>> weatherMapBasedOnDate = getWeatherMapBasedOnDate(weatherList);
+		
 		if(!StringUtils.isEmpty(startDate) && !StringUtils.isEmpty(endDate)) {
-			this.eraseAll();
+			
+			
 		}
 		else if(StringUtils.isEmpty(startDate) && !StringUtils.isEmpty(endDate)) {
-			this.erase(endDate);
+		
+			Date date = this.getDate(endDate);
+			if(weatherMapBasedOnDate.containsKey(date))weatherMapBasedOnDate.remove(date);
+			
+			weatherMapBasedOnDate.forEach((k,v)->{
+				this.weatherList.addAll(v);
+			});
 		}
 		else if(!StringUtils.isEmpty(startDate) && StringUtils.isEmpty(endDate)) {
-			 if(latitude!=null && longitude!=null){
-				 this.erase(startDate,latitude,longitude);
-			 }
-			this.erase(startDate);
+			
+			Date date = this.getDate(startDate);
+			if(weatherMapBasedOnDate.containsKey(date))weatherMapBasedOnDate.remove(date);
+			
+			weatherMapBasedOnDate.forEach((k,v)->{
+				this.weatherList.addAll(v);
+			});
 		}
-		else if(!StringUtils.isEmpty(startDate) && !StringUtils.isEmpty(endDate)) {
-			this.erase(startDate,endDate);
-		}
-		else if(!StringUtils.isEmpty(startDate) && !StringUtils.isEmpty(endDate) && latitude!=null && longitude!=null) {
-			this.erase(startDate,endDate,latitude,longitude);
-		}
-		else if(latitude!=null && longitude!=null ) {
-			this.erase(latitude,longitude);
-		}
+		
 		
 	}
-
-	private void erase(Long latitude, Long longitude) {
-		// TODO Auto-generated method stub
-List<Weather> weatherlist = this.weatherRepository.selectByLatitudeLongitude(latitude,longitude);
-		
-		List<Long> weatherIdList = 
-				weatherlist.parallelStream().map(weatherToWeatherId).filter(w -> w != null)
-				.collect(Collectors.<Long>toList());
-				
-				
-		this.temperatureDetailsRepository.deleteByWeatherId(weatherIdList);
-	}
-
-
-
-
-	private void erase(String dateInString, Long latitude, Long longitude) {
-		Date utilDate = Utils.getDate(dateInString);
-		java.sql.Date sqlDate = new java.sql.Date(utilDate.getTime());
-List<Weather> weatherlist = this.weatherRepository.selectByDateAndLatitudeLongitude(sqlDate,latitude,longitude);
-		
-		List<Long> weatherIdList = 
-				weatherlist.parallelStream().map(weatherToWeatherId).filter(w -> w != null)
-				.collect(Collectors.<Long>toList());
-				
-				
-		this.temperatureDetailsRepository.deleteByWeatherId(weatherIdList);
-		
-	}
-
-
-
 
 	@Override
-	public List<Weather> weather(String dateInString, Long latitude,Long longitude) throws CustomException{
+	public List<Weather> weather(String date, Long latitude,Long longitude) {
 		// TODO Auto-generated method stub
 		List<Weather> weatherData = null;
-		if(!StringUtils.isEmpty(dateInString)) {
-			Date utilDate = Utils.getDate(dateInString);
-			java.sql.Date sqlDate = new java.sql.Date(utilDate.getTime());
-			if (!StringUtils.isEmpty(latitude) && !StringUtils.isEmpty(longitude)) {
-				weatherData = weatherRepository.selectByDateAndLatitudeLongitude(sqlDate, latitude, longitude);
-			}else {
-				weatherData = this.weatherRepository.findAllByDate(sqlDate);
-			}
-		}else if(!StringUtils.isEmpty(latitude) && !StringUtils.isEmpty(longitude)) {
-			weatherData = this.weatherRepository.selectByLatitudeLongitude(latitude, longitude);
-			
-		}else {
-			weatherData = (List<Weather>) this.weatherRepository.findAll();
-		}
-			
-		if(CollectionUtils.isEmpty(weatherData)) {
-			 throw new CustomException("Record Does not exist","404");
+		if(!StringUtils.isEmpty(date) && StringUtils.isEmpty(latitude)) {
+			Date dateObj = this.getDate(date);
+			Map<Date,List<Weather>> weatherMapBasedOnDate = getWeatherMapBasedOnDate(weatherList);
+			weatherData = weatherMapBasedOnDate.get(date);
+		}else if (!StringUtils.isEmpty(latitude) && !StringUtils.isEmpty(longitude)) {
+			Map<String,List<Weather>> weatherMapBasedOnDate = getWeatherMapBasedOnLatitudelongitude(weatherList);
+			weatherData = weatherMapBasedOnDate.get(latitude + "-" +longitude);
+			weatherData.sort(Comparator.comparing(Weather::getId));
 		}
 			  
 		return weatherData;
 	}
 
-	
+
+
+
+	@Override
+	public void add(Weather weather) {
+		// TODO Auto-generated method stub
+		
+	}
 
 
 
 
 	@Override
-	public void add(Weather weather) throws CustomException{
-		 weather.setTemperatureDetails();
-		 Long id = weather.getId();
-		 Optional<Weather> weatherWithId = this.weatherRepository.findById(id);
-		 if(weatherWithId.isPresent())
-			 throw new CustomException("ID already exists","400");
-		 else 	 
-			 this.weatherRepository.save(weather);
+	public void erase(String date) {
+		// TODO Auto-generated method stub
+		
 	}
 
-	@Override
-	public void erase(String dateInString) {
-		Date utilDate = Utils.getDate(dateInString);
-		java.sql.Date sqlDate = new java.sql.Date(utilDate.getTime());
-		List<Weather> list = this.weatherRepository.findAllByDate(sqlDate);
-		this.weatherRepository.deleteAll(list);
-	}
+
+
 
 	@Override
 	public void eraseAll() {
-		this.weatherRepository.deleteAll();
+		// TODO Auto-generated method stub
+		
 	}
 
 
@@ -265,30 +212,14 @@ List<Weather> weatherlist = this.weatherRepository.selectByDateAndLatitudeLongit
 
 	@Override
 	public void erase(String startdate, String endDate) {
-		Date utilStartDate = Utils.getDate(startdate);
-		java.sql.Date sqlStartDate = new java.sql.Date(utilStartDate.getTime());
-		Date utilEndDate = Utils.getDate(endDate);
-		java.sql.Date sqlEndDate = new java.sql.Date(utilEndDate.getTime());
-		this.weatherRepository.deleteByStartDateEndDate(sqlStartDate,sqlEndDate);	
+		// TODO Auto-generated method stub
+		
 	}
-
-
 
 
 	@Override
 	public void erase(String startDate, String endDate, Long latitude) {
-		Date utilStartDate = Utils.getDate(startDate);
-		java.sql.Date sqlStartDate = new java.sql.Date(utilStartDate.getTime());
-		Date utilEndDate = Utils.getDate(endDate);
-		java.sql.Date sqlEndDate = new java.sql.Date(utilEndDate.getTime());
-		List<Weather> weatherlist = this.weatherRepository.selectByStartDateEndDateAndLatitude(sqlStartDate,sqlEndDate,latitude);
-		
-		List<Long> weatherIdList = 
-				weatherlist.parallelStream().map(weatherToWeatherId).filter(w -> w != null)
-				.collect(Collectors.<Long>toList());
-				
-				
-		this.temperatureDetailsRepository.deleteByWeatherId(weatherIdList);
+		// TODO Auto-generated method stub
 		
 	}
 

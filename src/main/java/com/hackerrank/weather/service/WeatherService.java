@@ -13,7 +13,12 @@ import com.hackerrank.weather.model.Weather;
  */
 public interface WeatherService {
 	public void loadJsonDb();
-	public void erase(String startDate,String endDate);
+	public void erase(String date);
+	public void erase(String startDate,String endDate, Long latitude, Long longitude);
+	public void add(Weather weather) throws CustomException;
+	public void eraseAll();
+	public void erase(String startdate, String endDate);
+	public void erase(String startDate, String endDate, Long latitude);
+	List<Weather> weather(String dateInString, Long latitude, Long longitude) throws CustomException;
 	
-	public List<Weather> weather(String date, String latitude, String longitude);
 }

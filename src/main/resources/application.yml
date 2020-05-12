@@ -1,0 +1,22 @@
+server:
+    port: 8000
+
+spring:   
+    main:
+        banner-mode: "off"       
+    datasource:
+        platform: h2
+        driverClassName: org.h2.Driver
+        url: jdbc:h2:mem:test;MODE=PostgreSQL
+    jpa:
+       hibernate:
+          ddl-auto: update
+    # SPRING HATEOAS (HateoasProperties)
+    hateoas:
+       use-hal-as-default-json-media-type: true  # Specify if application/hal+json responses should be sent to requests that accept application/json.
+    
+logging: 
+    level: 
+        org: 
+            springframework: ERROR
+          
